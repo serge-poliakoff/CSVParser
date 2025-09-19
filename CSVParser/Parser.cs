@@ -8,19 +8,70 @@ namespace CSVParser;
 
 public class CsvParser<T>
 {
-    private List<(IColumnTransformer transformer, int colIndex)> transformers;
+    private List<(IColumnTransformer transformer, int colIndex)> columnTransformers;
     private NameParser headerParser;
-    private List<IColumnTransformer> columnTransformers;
+    private List<IColumnTransformer> propertyTransformers;
 
     private Type parseType;
+    private List<PropertyInfo> props;
 
-    private bool writeId = true;
+    private bool writeId = false;
     private IColumnTransformer IdTransformer;
+
+    private int[] columnIndexes;
+    private string[] columnNames;
+    private bool useColumnNames = false;
+
     public CsvParser()
     {
-        columnTransformers = new List<IColumnTransformer>();
-        transformers = new List<(IColumnTransformer transformer, int colIndex)>();
+        parseType = typeof(T);
+        props = parseType.GetProperties().ToList();
+
+        propertyTransformers = new List<IColumnTransformer>();
+        columnTransformers = new List<(IColumnTransformer transformer, int colIndex)>();
         headerParser = new NameParser();
+    }
+
+    #region Options
+    public CsvParser<T> WriteId()
+    {
+        writeId = true;
+
+        var idProp = props.Where(p => p.Name == "Id").FirstOrDefault();
+        if (idProp == null)
+        {
+            throw new Exception($"Id property not found on type {parseType}");
+            //change to custom CSVParserBuildException
+        }
+
+        IdTransformer = new BaseColumnTransformer() { Property = idProp };
+        props.Remove(idProp);   //this would be removed, so that we can feel free to iterate on
+            //other props in order to find their columns etc.
+
+        return this;
+    }
+
+    public CsvParser<T> WithImplicitColumnDeclaration(int[] colIndexes)
+    {
+        if (colIndexes.Length != props.Count)
+        {
+            throw new Exception($"Provided indexes doesn't match to the count of properties on {parseType}");
+            //change to custom CSVParserBuildException
+        }
+        columnIndexes = colIndexes;
+        return this;
+    }
+
+    public CsvParser<T> WithImplicitColumnDeclaration(string[] colNames)
+    {
+        if (colNames.Length != props.Count)
+        {
+            throw new Exception($"Provided indexes doesn't match to the count of properties on {parseType}");
+            //change to custom CSVParserBuildException
+        }
+        columnNames = colNames;
+        useColumnNames = true;
+        return this;
     }
 
     public CsvParser<T> WithHeaderParser(Func<NameParser, NameParser> configure)
@@ -30,49 +81,71 @@ public class CsvParser<T>
         return this;
     }
 
+    #endregion
+
+    // creates column columnTransformers for each property
     public CsvParser<T> Build()
     {
-        parseType = typeof(T);
-        var props = parseType.GetProperties().ToList();
+        
         foreach(var prop in props)
         {
-            if (prop.Name == "Id" && writeId)
-            {
-                IdTransformer = new BaseColumnTransformer() { Property = prop };
-                continue;     //do not ad id column if it would be overwritten
-            }
-            columnTransformers.Add(
+            propertyTransformers.Add(
                 new BaseColumnTransformer() { Property = prop }
             );
         }
         return this;
     }
 
-    //extract to HeaderParser (which would contain naming policies etc)
+    //creates columnTransformers
     private void FitColumnTransformers((int Index, string Item)[] header)
     {
-        for (int i = 0; i < columnTransformers.Count; i++)
+        if (columnIndexes != null)
         {
-            var propName = columnTransformers[i].Property.Name;
-
-            int? ind = null;
-            foreach(var nameParcerFunc in headerParser)
+            for(int i = 0; i < propertyTransformers.Count; i++)
             {
-                var probableName = nameParcerFunc(propName);
-                ind = header.Where(col => col.Item == probableName)
+                columnTransformers.Add(new()
+                {
+                    colIndex = columnIndexes[i],
+                    transformer = propertyTransformers[i]
+                });
+            }
+
+            return;
+        }
+
+        for (int i = 0; i < propertyTransformers.Count; i++)
+        {
+            var propName = propertyTransformers[i].Property.Name;
+
+            //searching index of the column corresponding to given property
+            int? ind = null;
+            if (useColumnNames)
+            {
+                ind = header.Where(col => col.Item == columnNames[i])
                     .Select(col => col.Index)
                     .Cast<int?>()
                     .FirstOrDefault();
-                if (ind != null) break;
+            }
+            else
+            {
+                foreach (var nameParcerFunc in headerParser)
+                {
+                    var probableName = nameParcerFunc(propName);
+                    ind = header.Where(col => col.Item == probableName)
+                        .Select(col => col.Index)
+                        .Cast<int?>()
+                        .FirstOrDefault();
+                    if (ind != null) break;
+                }
             }
 
             if (ind == null)
                 throw new Exception($"Can not convert to {typeof(T).Name} - " +
                     $"no column found for {propName} property");
 
-            transformers.Add(new ()
+            columnTransformers.Add(new ()
             {
-                transformer = columnTransformers[i],
+                transformer = propertyTransformers[i],
                 colIndex = ind.GetValueOrDefault()  //ind can not be null here, however to cast from int?
             });
         }
@@ -94,10 +167,10 @@ public class CsvParser<T>
         {
             var data = line.Split(',');
             var ent = Activator.CreateInstance(parseType);
-            for (int i = 0; i < transformers.Count; i++)
+            for (int i = 0; i < columnTransformers.Count; i++)
             {
-                var columnIndex = transformers[i].colIndex;   //index of a column with value
-                transformers[i].transformer.TransformValue(ent, data[columnIndex]);
+                var columnIndex = columnTransformers[i].colIndex;   //index of a column with value
+                columnTransformers[i].transformer.TransformValue(ent, data[columnIndex]);
             }
             if (writeId)
                 IdTransformer.TransformValue(ent, ind.ToString());
@@ -106,66 +179,5 @@ public class CsvParser<T>
         }
 
         return result as IList<T>;
-    }
-
-    private IList ParseObsolete(string path)
-    {
-        using var stream = new StreamReader(path);
-        //var lines = File.ReadAllLines(path);
-        //int lines_count = lines.Length - 1; //minus one for header
-
-        var header = stream.ReadLine()!.Split(',').Index();
-        int columns_count = header.Count();
-        
-        
-        //checking that T is a correct type for parsing: a property per column name
-        Type parseType = typeof(T);
-        var props = parseType.GetProperties().ToList();
-        PropertyInfo idProp = null!;
-        foreach (var prop in props)
-        {
-            if (prop.Name == "Id")
-            {
-                idProp = prop;
-                if (writeId) continue;
-            }
-            if (header.Where(col => col.Item == prop.Name).Count() == 0)
-            {
-                throw new Exception($"Can not convert to {parseType.Name} - no column found for {prop.Name} property");
-            }
-        }
-        if (idProp != null & writeId)
-        {
-            props.Remove(idProp);
-        }
-        var columnProperties = props
-            .Select(prop => header.Where(col => col.Item == prop.Name).First().Index)
-            .ToArray();     //map between properties and columns' indexes
-
-        
-
-        var resultListType = typeof(List<>).MakeGenericType(parseType);
-        var result = (IList)Activator.CreateInstance(resultListType)!;
-
-        int ind = 0;
-        string line;
-        while ((line = stream.ReadLine()) != null)
-        {
-            var data = line.Split(',');
-            var ent = Activator.CreateInstance(parseType);
-            for (int i = 0; i < props.Count; i++)
-            {
-                var valueIndex = columnProperties[i];   //index of a column with value
-                var value = Convert.ChangeType(data[valueIndex], props[i].PropertyType,
-                    CultureInfo.InvariantCulture);
-                props[i].SetValue(ent, value);
-            }
-            if (writeId)
-                idProp.SetValue(ent, ind);
-            result.Add(ent);
-            ind++;
-        }
-
-        return result;
     }
 }
