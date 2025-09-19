@@ -37,8 +37,8 @@ public class NameParser : IEnumerable<Func<string, string>>
             case NameParsingStandarts.ExactMatch:
                 AddNamingPolicy(NameParsingDefaults.ExactMatch);
                 break;
-            case NameParsingStandarts.SnakeCase:
-                AddNamingPolicy(NameParsingDefaults.SnakeCase);
+            case NameParsingStandarts.PascalToSnakeCase:
+                AddNamingPolicy(NameParsingDefaults.PascalToSnakeCase);
                 break;
         }
         return this;
