@@ -8,6 +8,7 @@ namespace CSVParser;
 
 public class CsvParser<T>
 {
+    private TranformerFactory factory;
     private List<(IColumnTransformer transformer, int colIndex)> columnTransformers;
     private NameParser headerParser;
     private List<IColumnTransformer> propertyTransformers;
@@ -27,6 +28,7 @@ public class CsvParser<T>
         parseType = typeof(T);
         props = parseType.GetProperties().ToList();
 
+        factory = new TranformerFactory();
         propertyTransformers = new List<IColumnTransformer>();
         columnTransformers = new List<(IColumnTransformer transformer, int colIndex)>();
         headerParser = new NameParser();
@@ -44,9 +46,17 @@ public class CsvParser<T>
             //change to custom CSVParserBuildException
         }
 
-        IdTransformer = new BaseColumnTransformer() { Property = idProp };
+        factory.AddMetadata("write_id", true);
+        IdTransformer = factory.Create(idProp);
         props.Remove(idProp);   //this would be removed, so that we can feel free to iterate on
             //other props in order to find their columns etc.
+
+        return this;
+    }
+
+    public CsvParser<T> WithFormat(Type type, string format)
+    {
+        factory.AddMetadata($"{type.Name}", format);
 
         return this;
     }
@@ -90,7 +100,7 @@ public class CsvParser<T>
         foreach(var prop in props)
         {
             propertyTransformers.Add(
-                new BaseColumnTransformer() { Property = prop }
+                factory.Create(prop)
             );
         }
         return this;

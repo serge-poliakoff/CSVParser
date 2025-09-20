@@ -5,7 +5,12 @@ namespace CSVParser.ColumnTransformers;
 internal class TranformerFactory
 {
     private Dictionary<string, object> metadata;
-    
+
+    public TranformerFactory()
+    {
+        metadata = new Dictionary<string, object>();
+    }
+
     //metadata conventions:
     //  - to indicate format use {TypeName}_format
     public void AddMetadata(string key, object value)
@@ -31,7 +36,7 @@ internal class TranformerFactory
         {
             object _;
             bool generator = property.Name == "Id"
-                && metadata.TryGetValue("GenerateId", out _);
+                && metadata.TryGetValue("write_id", out _);
 
             result = new GuidTransformer()
             {
