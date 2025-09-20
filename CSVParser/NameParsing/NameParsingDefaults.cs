@@ -5,7 +5,9 @@ namespace CSVParser.NameParsing;
 public enum NameParsingStandarts
 {
     ExactMatch, 
-    PascalToSnakeCase
+    PascalToSnakeCase,
+    SnakeCaseToPascal,
+    SupressSpaces
 }
 
 /// <summary>

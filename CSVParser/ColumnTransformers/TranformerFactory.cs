@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using CSVParser.NameParsing;
+using System.Reflection;
 
 namespace CSVParser.ColumnTransformers;
 
@@ -43,6 +44,18 @@ internal class TranformerFactory
                 Property = property,
                 id_gen = generator
             };
+            return result;
+        }
+
+        if (property.PropertyType.IsEnum)
+        {
+            object enumParser;
+            if (!metadata.TryGetValue("enum_parser", out enumParser))
+                enumParser = new NameParser();
+
+            result = new EnumTransformer(
+                property,
+                (NameParser)enumParser);
             return result;
         }
 

@@ -40,6 +40,12 @@ public class NameParser : IEnumerable<Func<string, string>>
             case NameParsingStandarts.PascalToSnakeCase:
                 AddNamingPolicy(NameParsingDefaults.PascalToSnakeCase);
                 break;
+            case NameParsingStandarts.SnakeCaseToPascal:
+                AddNamingPolicy(NameParsingDefaults.SnakeCaseToPascal);
+                break;
+            case NameParsingStandarts.SupressSpaces:
+                AddNamingPolicy(NameParsingDefaults.SupressSpaces);
+                break;
         }
         return this;
     }

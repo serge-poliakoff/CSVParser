@@ -61,6 +61,16 @@ public class CsvParser<T>
         return this;
     }
 
+    public CsvParser<T> WithEnumParser(Action<NameParser> configure)
+    {
+        var enumParser = new NameParser();
+        configure(enumParser);
+
+        factory.AddMetadata("enum_parser", enumParser);
+
+        return this;
+    }
+
     public CsvParser<T> WithImplicitColumnDeclaration(int[] colIndexes)
     {
         if (colIndexes.Length != props.Count)
