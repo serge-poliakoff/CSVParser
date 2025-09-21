@@ -171,9 +171,28 @@ public class CsvParser<T>
         }
     }
 
-    public IList<T> Parse(string path)
+    public IList<T> ParseFile(string path)
     {
         using var stream = new StreamReader(path);
+        
+        var result = Parse(stream);
+
+        //do not refactor to return Parse, as stream would be then closed by "using" directive
+        return result;
+    }
+
+    public IList<T> ParseStream(Stream stream)
+    {
+        using var reader = new StreamReader(stream);
+
+        var result = Parse(reader);
+
+        return result;
+    }
+
+    public IList<T> Parse(StreamReader stream)
+    {
+        
         var header = stream.ReadLine()!.Split(',').Index().ToArray();
 
         FitColumnTransformers(header);
@@ -200,4 +219,6 @@ public class CsvParser<T>
 
         return result as IList<T>;
     }
+
+    //add stream to db (+async version - save changes after writing tasks.whenall)
 }

@@ -40,4 +40,6 @@ internal static class NameParsingDefaults
     {
         return s.Replace(" ", "");
     }
+
+    //todo: add supress spaces and capitalize policy for enums
 }
