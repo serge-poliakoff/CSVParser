@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CSVParser.ColumnTransformers;
 
-public interface IColumnTransformer
+internal interface IColumnTransformer
 {
     PropertyInfo Property { get; init; }
     Type ColumnType { get => Property.PropertyType; }

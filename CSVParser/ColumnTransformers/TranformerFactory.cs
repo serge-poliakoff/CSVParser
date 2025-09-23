@@ -23,17 +23,39 @@ internal class TranformerFactory
     {
         IColumnTransformer result;
 
+        var format = GetFormat(property.PropertyType);
+
         if (property.PropertyType == typeof(DateOnly))
         {
             result = new DateOnlyTransformer()
             {
                 Property = property,
-                format = GetFormat(typeof(DateOnly))
+                format = format
             };
             return result;
         }
-        
-        if(property.PropertyType == typeof(Guid))
+
+        if (property.PropertyType == typeof(DateTime))
+        {
+            result = new DateTimeTransformer()
+            {
+                Property = property,
+                format = format
+            };
+            return result;
+        }
+
+        if (property.PropertyType == typeof(TimeSpan))
+        {
+            result = new TimeSpanTranformer()
+            {
+                Property = property,
+                format = format
+            };
+            return result;
+        }
+
+        if (property.PropertyType == typeof(Guid))
         {
             object _;
             bool generator = property.Name == "Id"

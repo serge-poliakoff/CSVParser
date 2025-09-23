@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CSVParser.ColumnTransformers;
 
-class GuidTransformer : IColumnTransformer
+internal class GuidTransformer : IColumnTransformer
 {
     public PropertyInfo Property { get; init; }
 

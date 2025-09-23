@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace CSVParser.ColumnTransformers;
 
-class DateTimeTransformer : IColumnTransformer
+internal class DateTimeTransformer : IColumnTransformer
 {
     public PropertyInfo Property { get; init; }
     public string? format;

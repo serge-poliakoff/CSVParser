@@ -4,7 +4,7 @@ using CSVParser.Exceptions;
 
 namespace CSVParser.ColumnTransformers;
 
-class DateOnlyTransformer : IColumnTransformer
+internal class DateOnlyTransformer : IColumnTransformer
 {
     public PropertyInfo Property { get; init; }
     public string? format;

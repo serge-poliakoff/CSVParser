@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CSVParser.ColumnTransformers;
 
-class EnumTransformer : IColumnTransformer
+internal class EnumTransformer : IColumnTransformer
 {
     public PropertyInfo Property { get; init; }
     public NameParser NameParser { get; init; }

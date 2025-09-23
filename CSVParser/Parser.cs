@@ -1,11 +1,10 @@
 ﻿using System.Collections;
-using System.Globalization;
 using System.Reflection;
 
 using CSVParser.ColumnTransformers;
 using CSVParser.Exceptions;
 using CSVParser.NameParsing;
-using Microsoft.EntityFrameworkCore;
+
 namespace CSVParser;
 
 public class CsvParser<T> where T : class
@@ -40,12 +39,23 @@ public class CsvParser<T> where T : class
 
     #region Options
 
+    /// <summary>
+    /// Sets the delimiter character used to split columns in the CSV file.
+    /// </summary>
+    /// <param name="delimiter">The delimiter character (e.g., ',').</param>
+    /// <returns>The current CsvParser instance for chaining. </returns>
     public CsvParser<T> WithDelimiter(char delimiter)
     {
         this.delimiter = delimiter;
 
         return this;
     }
+
+    /// <summary>
+    /// Configures the parser to write an auto-incremented (or auto-generated) Id property for each parsed entity.
+    /// Throws if the type T does not have an "Id" property.
+    /// </summary>
+    /// <returns>The current CsvParser instance for chaining. </returns>
     public CsvParser<T> WriteId()
     {
         writeId = true;
@@ -64,6 +74,12 @@ public class CsvParser<T> where T : class
         return this;
     }
 
+    /// <summary>
+    /// Specifies a custom format string for parsing properties of a given type (e.g., DateTime).
+    /// </summary>
+    /// <param name="type">The property type to apply the format to.</param>
+    /// <param name="format">The format string.</param>
+    /// <returns>The current CsvParser instance for chaining. </returns>
     public CsvParser<T> WithFormat(Type type, string format)
     {
         factory.AddMetadata($"{type.Name}", format);
@@ -71,6 +87,11 @@ public class CsvParser<T> where T : class
         return this;
     }
 
+    /// <summary>
+    /// Configures a custom name parser for handling enum property names.
+    /// </summary>
+    /// <param name="configure">An action to configure the NameParser for enums.</param>
+    /// <returns>The current CsvParser instance for chaining. </returns>
     public CsvParser<T> WithEnumParser(Action<NameParser> configure)
     {
         var enumParser = new NameParser();
@@ -81,6 +102,13 @@ public class CsvParser<T> where T : class
         return this;
     }
 
+    /// <summary>
+    /// Declares the column indexes to map to each property, in order of their declaration on T.
+    /// Pay attention to use this method after WriteId() if you want use auto-generated Id's
+    /// Throws if the number of indexes does not match the number of properties.
+    /// </summary>
+    /// <param name="colIndexes">Array of column indexes.</param>
+    /// <returns>The current CsvParser instance for chaining. </returns>
     public CsvParser<T> WithImplicitColumnDeclaration(int[] colIndexes)
     {
         if (colIndexes.Length != props.Count)
@@ -91,6 +119,13 @@ public class CsvParser<T> where T : class
         return this;
     }
 
+    /// <summary>
+    /// Declares the column names to map to each property, in order of their declaration on T.
+    /// Throws if the number of names does not match the number of properties.
+    /// Pay attention to use this method after WriteId() if you want use auto-generated Id's
+    /// </summary>
+    /// <param name="colNames">Array of column names.</param>
+    /// <returns>The current CsvParser instance for chaining.</returns>
     public CsvParser<T> WithImplicitColumnDeclaration(string[] colNames)
     {
         if (colNames.Length != props.Count)
@@ -102,6 +137,11 @@ public class CsvParser<T> where T : class
         return this;
     }
 
+    /// <summary>
+    /// Configures the name parser, which is used to match property names to column names.
+    /// </summary>
+    /// <param name="configure">A function to configure the NameParser.</param>
+    /// <returns>The current CsvParser instance for chaining.</returns>
     public CsvParser<T> WithHeaderParser(Func<NameParser, NameParser> configure)
     {
         configure(headerParser);
@@ -113,7 +153,12 @@ public class CsvParser<T> where T : class
 
 
     #region Prepare parsing
-    // creates column columnTransformers for each property
+
+    /// <summary>
+    /// Prepares the parser by creating column transformers for each property.
+    /// Must be called before parsing.
+    /// </summary>
+    /// <returns>The current CsvParser instance, ready to work.</returns>
     public CsvParser<T> Build()
     {
         
@@ -126,7 +171,7 @@ public class CsvParser<T> where T : class
         return this;
     }
 
-    //creates columnTransformers
+    
     private void FitColumnTransformers((int Index, string Item)[] header)
     {
         if (columnIndexes != null)
@@ -185,6 +230,11 @@ public class CsvParser<T> where T : class
 
     #region Parse methodes
 
+    /// <summary>
+    /// Parses a CSV file from the specified file path and returns a list of parsed entities.
+    /// </summary>
+    /// <param name="path">The file path to the CSV file.</param>
+    /// <returns>A list of parsed entities of type T.</returns>
     public IList<T> ParseFile(string path)
     {
         using var stream = new StreamReader(path);
@@ -195,6 +245,11 @@ public class CsvParser<T> where T : class
         return result;
     }
 
+    /// <summary>
+    /// Parses a CSV file from the provided stream and returns a list of parsed entities.
+    /// </summary>
+    /// <param name="stream">The input stream containing CSV data.</param>
+    /// <returns>A list of parsed entities of type T.</returns>
     public IList<T> ParseStream(Stream stream)
     {
         using var reader = new StreamReader(stream);
@@ -204,6 +259,11 @@ public class CsvParser<T> where T : class
         return result;
     }
 
+    /// <summary>
+    /// Parses a CSV file from the provided StreamReader and returns a list of parsed entities.
+    /// </summary>
+    /// <param name="stream">The StreamReader for the CSV data.</param>
+    /// <returns>A list of parsed entities of type T.</returns>
     public IList<T> Parse(StreamReader stream)
     {
         
@@ -232,42 +292,6 @@ public class CsvParser<T> where T : class
         }
 
         return result as IList<T>;
-    }
-    
-    /// <summary>
-    /// Writes csv data from given stream directly to the database
-    /// </summary>
-    /// <remarks>Attention! Doesn't work with writing integer id's for whatever reason (</remarks>
-    /// <returns>Number of rows inserted to db</returns>
-    public int StreamCSVToDb(Stream stream, DbContext db)
-    {
-        using var reader = new StreamReader(stream);
-
-        var header = reader.ReadLine()!.Split(delimiter).Index().ToArray();
-
-        FitColumnTransformers(header);
-
-        int ind = 0;
-        string line;
-        while ((line = reader.ReadLine()!) != null)
-        {
-            var data = line.Split(',');
-            var ent = Activator.CreateInstance(parseType);
-            
-            for (int i = 0; i < columnTransformers.Count; i++)
-            {
-                var columnIndex = columnTransformers[i].colIndex;   //index of a column with value
-                columnTransformers[i].transformer.TransformValue(ent, data[columnIndex]);
-            }
-            if (writeId)
-                IdTransformer.TransformValue(ent, ind.ToString());
-
-            db.Set<T>().Add(ent as T);
-            ind++;
-        }
-
-        //stream would be closed automatically with its reader
-        return db.SaveChanges();
     }
 
     #endregion
