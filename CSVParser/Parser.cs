@@ -3,10 +3,12 @@ using System.Globalization;
 using System.Reflection;
 
 using CSVParser.ColumnTransformers;
+using CSVParser.Exceptions;
 using CSVParser.NameParsing;
+using Microsoft.EntityFrameworkCore;
 namespace CSVParser;
 
-public class CsvParser<T>
+public class CsvParser<T> where T : class
 {
     private TranformerFactory factory;
     private List<(IColumnTransformer transformer, int colIndex)> columnTransformers;
@@ -23,6 +25,8 @@ public class CsvParser<T>
     private string[] columnNames;
     private bool useColumnNames = false;
 
+    private char delimiter = ',';
+
     public CsvParser()
     {
         parseType = typeof(T);
@@ -35,6 +39,13 @@ public class CsvParser<T>
     }
 
     #region Options
+
+    public CsvParser<T> WithDelimiter(char delimiter)
+    {
+        this.delimiter = delimiter;
+
+        return this;
+    }
     public CsvParser<T> WriteId()
     {
         writeId = true;
@@ -42,8 +53,7 @@ public class CsvParser<T>
         var idProp = props.Where(p => p.Name == "Id").FirstOrDefault();
         if (idProp == null)
         {
-            throw new Exception($"Id property not found on type {parseType}");
-            //change to custom CSVParserBuildException
+            throw new CSVParserBuildingException($"Id property not found on type {parseType}");
         }
 
         factory.AddMetadata("write_id", true);
@@ -75,8 +85,7 @@ public class CsvParser<T>
     {
         if (colIndexes.Length != props.Count)
         {
-            throw new Exception($"Provided indexes doesn't match to the count of properties on {parseType}");
-            //change to custom CSVParserBuildException
+            throw new CSVParserBuildingException($"Provided indexes doesn't match to the count of properties on {parseType}");
         }
         columnIndexes = colIndexes;
         return this;
@@ -86,8 +95,7 @@ public class CsvParser<T>
     {
         if (colNames.Length != props.Count)
         {
-            throw new Exception($"Provided indexes doesn't match to the count of properties on {parseType}");
-            //change to custom CSVParserBuildException
+            throw new CSVParserBuildingException($"Provided indexes doesn't match to the count of properties on {parseType}");
         }
         columnNames = colNames;
         useColumnNames = true;
@@ -103,6 +111,8 @@ public class CsvParser<T>
 
     #endregion
 
+
+    #region Prepare parsing
     // creates column columnTransformers for each property
     public CsvParser<T> Build()
     {
@@ -171,6 +181,10 @@ public class CsvParser<T>
         }
     }
 
+    #endregion
+
+    #region Parse methodes
+
     public IList<T> ParseFile(string path)
     {
         using var stream = new StreamReader(path);
@@ -193,7 +207,7 @@ public class CsvParser<T>
     public IList<T> Parse(StreamReader stream)
     {
         
-        var header = stream.ReadLine()!.Split(',').Index().ToArray();
+        var header = stream.ReadLine()!.Split(delimiter).Index().ToArray();
 
         FitColumnTransformers(header);
 
@@ -219,6 +233,42 @@ public class CsvParser<T>
 
         return result as IList<T>;
     }
+    
+    /// <summary>
+    /// Writes csv data from given stream directly to the database
+    /// </summary>
+    /// <remarks>Attention! Doesn't work with writing integer id's for whatever reason (</remarks>
+    /// <returns>Number of rows inserted to db</returns>
+    public int StreamCSVToDb(Stream stream, DbContext db)
+    {
+        using var reader = new StreamReader(stream);
 
-    //add stream to db (+async version - save changes after writing tasks.whenall)
+        var header = reader.ReadLine()!.Split(delimiter).Index().ToArray();
+
+        FitColumnTransformers(header);
+
+        int ind = 0;
+        string line;
+        while ((line = reader.ReadLine()!) != null)
+        {
+            var data = line.Split(',');
+            var ent = Activator.CreateInstance(parseType);
+            
+            for (int i = 0; i < columnTransformers.Count; i++)
+            {
+                var columnIndex = columnTransformers[i].colIndex;   //index of a column with value
+                columnTransformers[i].transformer.TransformValue(ent, data[columnIndex]);
+            }
+            if (writeId)
+                IdTransformer.TransformValue(ent, ind.ToString());
+
+            db.Set<T>().Add(ent as T);
+            ind++;
+        }
+
+        //stream would be closed automatically with its reader
+        return db.SaveChanges();
+    }
+
+    #endregion
 }

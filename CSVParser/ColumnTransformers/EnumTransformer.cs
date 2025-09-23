@@ -1,4 +1,5 @@
-﻿using CSVParser.NameParsing;
+﻿using CSVParser.Exceptions;
+using CSVParser.NameParsing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,9 +35,19 @@ class EnumTransformer : IColumnTransformer
 
         //change to custom ConvertException
         if (key == null)
-            throw new Exception($"Enum convertion exception on {Property} property: cannot convert {value}");
+            throw new ConvertException($"Enum convertion exception on {Property} property:" +
+                $" haven't found the appropriate enum value for {value}\n" +
+                $"The issue may be a wrong policy given for enum name parser");
 
-        object result = Enum.Parse(Property.PropertyType, key);
+        object result;
+        try
+        {
+            result = Enum.Parse(Property.PropertyType, key);
+        }
+        catch (Exception e)
+        {
+            throw new ConvertException($"Cannot convert {value} to the type of {Property.PropertyType}");
+        }
         Property.SetValue(obj, result);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CSVParser.Exceptions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -18,7 +19,15 @@ class GuidTransformer : IColumnTransformer
         if (id_gen)
             guid = Guid.NewGuid();
         else
-            guid = Guid.Parse(value);
+        {
+            try { 
+                guid = Guid.Parse(value);
+            }
+            catch (Exception e)
+            {
+                throw new ConvertException($"Cannot convert {value} to the type of {Property.PropertyType}");
+            }
+        }
 
         Property.SetValue(obj, guid);
     }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CSVParser.Exceptions;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -15,8 +16,15 @@ internal class BaseColumnTransformer : IColumnTransformer
 
     public void TransformValue(object obj, string value)
     {
-        var result = Convert.ChangeType(value, ColumnType,
+        object result;
+        try { 
+            result = Convert.ChangeType(value, ColumnType,
             CultureInfo.InvariantCulture);
+        }
+        catch (Exception e)
+        {
+            throw new ConvertException($"Cannot convert {value} to the type of {ColumnType}");
+        }
         Property.SetValue(obj, result);
     }
 }
