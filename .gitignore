@@ -6,6 +6,7 @@
 #user-defined
 *.Example/
 *.csv	#pour l'instant
+*.png
 
 # dotenv files
 .env
