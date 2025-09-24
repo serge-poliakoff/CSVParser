@@ -109,7 +109,7 @@ public class CsvParser<T> where T : class
     /// </summary>
     /// <param name="colIndexes">Array of column indexes.</param>
     /// <returns>The current CsvParser instance for chaining. </returns>
-    public CsvParser<T> WithImplicitColumnDeclaration(int[] colIndexes)
+    public CsvParser<T> WithExplicitColumnDeclaration(int[] colIndexes)
     {
         if (colIndexes.Length != props.Count)
         {
@@ -126,7 +126,7 @@ public class CsvParser<T> where T : class
     /// </summary>
     /// <param name="colNames">Array of column names.</param>
     /// <returns>The current CsvParser instance for chaining.</returns>
-    public CsvParser<T> WithImplicitColumnDeclaration(string[] colNames)
+    public CsvParser<T> WithExplicitColumnDeclaration(string[] colNames)
     {
         if (colNames.Length != props.Count)
         {
@@ -178,6 +178,9 @@ public class CsvParser<T> where T : class
         {
             for(int i = 0; i < propertyTransformers.Count; i++)
             {
+                if (columnIndexes[i] >= header.Length)
+                    throw new CsvParsingException($"Can not convert to {typeof(T).Name} - " +
+                        $"no column found at index {columnIndexes[i]} for given csv table ({header.Length} columns)");
                 columnTransformers.Add(new()
                 {
                     colIndex = columnIndexes[i],
@@ -215,7 +218,7 @@ public class CsvParser<T> where T : class
             }
 
             if (ind == null)
-                throw new Exception($"Can not convert to {typeof(T).Name} - " +
+                throw new CsvParsingException($"Can not convert to {typeof(T).Name} - " +
                     $"no column found for {propName} property");
 
             columnTransformers.Add(new ()
