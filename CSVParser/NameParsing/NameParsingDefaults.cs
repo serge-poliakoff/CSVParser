@@ -7,7 +7,8 @@ public enum NameParsingStandarts
     ExactMatch, 
     PascalToSnakeCase,
     SnakeCaseToPascal,
-    SupressSpaces
+    SupressSpaces,
+    SupressCapitalise
 }
 
 /// <summary>
@@ -21,6 +22,7 @@ internal static class NameParsingDefaults
 
     public static string PascalToSnakeCase(string s)
     {
+        if (string.IsNullOrEmpty(s)) return s;
         return Regex.Replace(s, "[A-Z]", (Match match) =>
         {
             var strMatch = match.ToString().ToLower();
@@ -30,6 +32,7 @@ internal static class NameParsingDefaults
     }
     public static string SnakeCaseToPascal(string s)
     {
+        if (string.IsNullOrEmpty(s)) return s;
         string res = s[0].ToString().ToUpper() + s.Substring(1);
         return Regex.Replace(res, "_[a-z]", (Match match) =>
         {
@@ -38,7 +41,18 @@ internal static class NameParsingDefaults
     }
     public static string SupressSpaces(string s)
     {
+        if (string.IsNullOrEmpty(s)) return s;
         return s.Replace(" ", "");
+    }
+
+    public static string SupressCapitalise(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return s;
+        s = s[0].ToString().ToUpper() + s.Substring(1).ToLower();
+        return Regex.Replace(s, " [a-z]", (Match match) =>
+        {
+            return match.ToString().Substring(1).ToUpper();
+        });
     }
 
     //todo: add supress spaces and capitalize policy for enums

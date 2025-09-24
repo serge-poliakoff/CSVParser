@@ -46,6 +46,9 @@ public class NameParser : IEnumerable<Func<string, string>>
             case NameParsingStandarts.SupressSpaces:
                 AddNamingPolicy(NameParsingDefaults.SupressSpaces);
                 break;
+            case NameParsingStandarts.SupressCapitalise:
+                AddNamingPolicy(NameParsingDefaults.SupressCapitalise);
+                break;
         }
         return this;
     }

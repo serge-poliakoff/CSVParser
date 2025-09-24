@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CSVParser.Exceptions;
 
-class ConvertException : Exception
+public class ConvertException : Exception
 {
     public ConvertException(string msg) : base(msg)
     {

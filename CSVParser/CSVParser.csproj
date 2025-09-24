@@ -2,10 +2,33 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
+    <PackageId>CamelBrainCompany.CsvParser</PackageId>
+    <PackageIcon>icon.png</PackageIcon>
+    <Authors>Serge Poliakoff</Authors>
+    <Company>CamelBrainCompany</Company>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Title>Library for reading csv files and mapping them to c# records</Title>
+    <RepositoryUrl>https://github.com/serge-poliakoff/CSVParser</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <AssemblyName>CamelBrainCompany.CsvParser</AssemblyName>
+    <Description>Extract data from csv files and map it to c# entities in a flexible and extensible way</Description>
+    <PackageTags>CSV;</PackageTags>
   </PropertyGroup>
+
   <ItemGroup>
-    <InternalsVisibleTo Include="CSVParser.Tests" />
+      <EmbeddedResource Include="./icon.png" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSVParser.Tests" Pack="true" Visible="false" PackagePath="" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 </Project>
